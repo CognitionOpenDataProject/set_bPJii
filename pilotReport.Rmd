@@ -8,7 +8,7 @@ output:
 
 #### Article ID: bPJii
 #### Pilot: Alicia Hofelich Mohr
-#### Co-pilot: Tom Hardwicke  
+#### Co-pilot: Mike Frank 
 #### Start date: 04-28-2017
 #### End date: 07-14-2017   
 
