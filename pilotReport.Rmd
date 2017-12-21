@@ -10,7 +10,8 @@ output:
 #### Pilot: Alicia Hofelich Mohr
 #### Co-pilot: Mike Frank 
 #### Start date: 04-28-2017
-#### End date: 07-14-2017   
+#### End date: 07-14-2017 
+#### Updated: 12-18-2017
 
 -------
 
@@ -21,19 +22,7 @@ Infants were presented with pictures of fearful and happy faces that were displa
 
 #### Target outcomes: 
 
-> 3.2. Fixation duration
 
-> While the main focus of the study was clearly on the analysis of pupil size, we also compared differences in fixation duration to complement this analysis.
-
-> As for pupil size, we observed a main effect of Emotion; infants showed a significantly longer fixation duration for happy compared to fearful facial expressions [F(1, 21) = 4.57, MSE = 0.015, p = .044, η2 = .19]. Furthermore, we found a main effect of Presentation Condition, showing that infants looked longer in the subliminal compared to the supraliminal condition [F(1, 21) = 8.57, MSE = 0.020, p = .008, η2 = .29] (see Fig. 2B). Note that in the subliminal conditions, a neutral face was presented during the time used for analyzing the fixation duration; hence, this effect can also be framed as a longer looking duration to neutral faces (as compared to emotional faces) preceded by subliminal emotional ones. An interaction between Presentation Condition and AOI [F(1, 21) = 20.42, MSE = 0.010, p < .001, η2 = .49] revealed that this was the case in particular for the eye region [t(21) = −4.06, p < .001, r = .66].
-
-> Furthermore, we observed a main effect of AOI [F(1, 21) = 59.05, MSE = 0.073, p < .001, η2 = .74], showing that infants fixated longer on the eye than on the mouth AOI.
-
-> There was no significant interaction between Emotion and Presentation Condition [F(1, 21) = 0.09, MSE = 0.007, p = .77, η2 = .004], AOI and Emotion [F(1, 21) = 0.004, MSE = 0.008, p = .95, η2 = .0002], or Emotion, Presentation Condition, and AOI [F(1, 21) = 1.76, MSE = 006, p = .20, η2 = .077].
-
-> 3.3. Results of correlation analysis
-
-> We did not observe a significant correlation between pupil diameter and fixation duration for the sum of both AOIs (p = .51, r = −.18), for the eye AOI (p = .31, r = −.27), or for the mouth AOI (p = .55, r = .16).
 
 ------
 
@@ -41,6 +30,7 @@ Infants were presented with pictures of fearful and happy faces that were displa
 ```{r global_options, include=FALSE}
 knitr::opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE)
 ```
+
 
 ## Step 1: Load packages
 
@@ -53,6 +43,233 @@ library(readxl) # import excel files
 library(CODreports) # custom report functions
 library(reshape2)
 ```
+
+## Step 1.5. Replicating with sent Matlab codes 
+
+The authors provided the matlab scripts for this study along with the raw data. Using Matlab (R2017a), I followed instructions to replicate their analyses. 
+
+Started with the pupil_pupilsize_analysis.m. I saved my script as "pupil_pupilsize_analysis_AHM.m" so I could add edits to the code. There were instructions for manual preparation of the raw data (select columns, convert to text, replace commas with periods in numbers), but only the raw excel data was provided. 
+
+I attempted to replicate this pre-processing in R (code is not evaluated in R markdown file; takes a while to run):
+```{r, eval = FALSE}
+datafolder <- paste0(getwd(), "/authorAssistance/data/rawdata_pupil")
+
+files <- grep("pupil", list.files(path=datafolder), value=T)
+
+for (i in files){
+  temp <- read_excel(path=paste(datafolder, i, sep="/"), col_types = "text")
+  #select variables (based on matlab script comments)
+  temp <- select(temp, RecordingTimestamp, MediaName, PupilLeft, PupilRight)
+  #replace commas with periods
+  commatoperiod <- function(x) {gsub(",", ".", as.character(x))}
+  temp <- apply(temp, 2, commatoperiod)
+  #write as tab separated text in "txt" folder
+  write.table(temp, file=paste(datafolder, "txt", paste0(gsub("xlsx", "", i), "txt"), sep="/"), sep="\t", row.names = FALSE)
+}
+
+```
+
+I couldn't get the preprocessing to work (my processed data wasn't being read in correctly by Matlab). 
+
+But it looks like we can start at the next section in that script using the processed data in the "preproc_segments" folder. I commented out the preprocessing section. The segmented data folder was named something different in the matlab script, so I adjusted the code to match, and the "statistics" section to the end to the end. 
+
+### Descriptive statistics
+
+> In the final sample, infants contributed on average 9.7 trials per condition (SD = 3.9).
+
+I did not see this statistic anywhere in the script, but did see that in the analysis loop, trial was used for each participant. I added code to capture the number of trials for each participant and compiled them into a single array. 
+
+I then took the mean and standard deviation of that array. The picture of the output from running the commands in the console is included below:
+
+![Descriptive Stats - 4 conditions](images/descriptivestats_4condition.png)
+
+The numbers here are still different than what was reported. Both the mean number of trials and the SD were lower than reported. However, it was unclear from the paper whether condition meant condition as described in the code, or just supraliminal/subliminal (without emotion). 
+
+To determine whether this was the case, I summed the supraliminal and subliminal and then took the mean and standard deviations. This resulted in the same mean as reported, but a lower standard deviation.  
+
+
+![Descriptive Stats - 2 conditions](images/descriptivestats_2condition.png)
+
+```{r}
+compareValues(reportedValue = 9.7, obtainedValue = 9.7)
+compareValues(reportedValue = 3.9, obtainedValue = 1.9)
+```
+
+### Inferential statistics
+> 3.1. Pupil diameter
+
+> We observed a main effect of Emotion [F(1, 19) = 6.45, MSE = .0039, p = .02, η2 = .25], revealing a larger pupil diameter for happy compared to fearful facial expressions irrespective of presentation condition (Figs. 2A and 3). There was no main effect of Presentation Condition [F(1, 19) = 0.40, MSE = .0029, p = .53, η2 = .02] and no interaction between Presentation Condition and Emotion [F(1, 19) = 1.17, MSE = .0011, p = .29, η2 = .06].
+
+They used the "repanova.m" and "smp_Fcdf.m" functions along with code from the pupil_analysis script to run the repeated measures ANOVA. 
+
+![ANOVA pupil size](images/rmANOVA_pupilsize.png)
+
+The numbers are very close but not exactly what was reported. I also do not know how to calculate the MSE and eta squared from their code. 
+
+```{r}
+#Emotion main effect
+compareValues(reportedValue = 6.45, obtainedValue = 6.285)
+
+#Duration main effect
+compareValues(reportedValue = 0.53, obtainedValue = 0.523, isP=TRUE)
+
+#interaction
+compareValues(reportedValue = 1.17, obtainedValue = 1.239)
+compareValues(reportedValue = 0.28, obtainedValue = 0.29, isP=TRUE)
+```
+
+> 3.2. Fixation duration
+
+> While the main focus of the study was clearly on the analysis of pupil size, we also compared differences in fixation duration to complement this analysis.
+
+For this analysis, ran the pupil_fixation_analysis.m and the did_baby_look_during_subliminal.m. I saved my changes as " pupil_fixation_analysis_AHMedits.m".
+
+The script was organized such that several lines of code had to be re-run with different conditions specified (described in comments). I added a few sections to the code to be sure I ran it in the correct order, as objects were named the same and could easily be erroneously assigned to the wrong condition if run out of order. 
+
+I ran the script as follows:  
+* Ran first two sections (lines 1-87) as is, changing directory information
+* Ran supraliminal section with condition = 1 in line 93
+* Copied and pasted the STORE values section for Happy into the command window (so the whole section would not run)
+* Updated the condition = 2 in line 93 and re-ran subliminal section
+* Copied and pasted the STORE values section for Fear into the command window (so the whole section would not run)
+* Updated the condition = 3 in line 93 and re-ran subliminal section (neutral was referenced later in the script and removed before analysis, but I didn't want to break anything)
+* Copied and pasted the STORE values section for Neutral into the command window (so the whole section would not run)
+* Ran compute mean values section
+* Ran the subliminal section starting at line 210, with condition = 4 in line 215. 
+* Then ran did_baby_look_during_subliminal.m with condition = 4
+* Ran section for eyes starting line 294
+* Copied and pasted the STORE values for condition 4 in the command window. 
+* Ran section for mouth starting at line 341
+* Copied and pasted the STORE values for condition 4 in the command window.
+* Ran the subliminal section at line 210 with condition = 5 in line 215
+* Then ran did_baby_look_during_subliminal.m with condition = 5
+* Ran section for eyes starting line 294
+* Copied and pasted the STORE values for condition 5 in the command window. 
+* Ran section for mouth starting at line 341
+* Copied and pasted the STORE values for condition 5 in the command window. 
+* Ran last two sections of script
+
+Again, the last lines of code used repanova and spm_Fcdf scripts for analysis. 
+
+
+![ANOVA fixation](images/rmANOVA_fixation.png)
+
+> As for pupil size, we observed a main effect of Emotion; infants showed a significantly longer fixation duration for happy compared to fearful facial expressions [F(1, 21) = 4.57, MSE = 0.015, p = .044, η2 = .19]. Furthermore, we found a main effect of Presentation Condition, showing that infants looked longer in the subliminal compared to the supraliminal condition [F(1, 21) = 8.57, MSE = 0.020, p = .008, η2 = .29] (see Fig. 2B). Note that in the subliminal conditions, a neutral face was presented during the time used for analyzing the fixation duration; hence, this effect can also be framed as a longer looking duration to neutral faces (as compared to emotional faces) preceded by subliminal emotional ones. An interaction between Presentation Condition and AOI [F(1, 21) = 20.42, MSE = 0.010, p < .001, η2 = .49] revealed that this was the case in particular for the eye region [t(21) = −4.06, p < .001, r = .66].
+
+These results all match the output (however again I am not sure how to calculate the other scores from their data)
+
+
+> Furthermore, we observed a main effect of AOI [F(1, 21) = 59.05, MSE = 0.073, p < .001, η2 = .74], showing that infants fixated longer on the eye than on the mouth AOI.
+
+This matches. 
+
+> There was no significant interaction between Emotion and Presentation Condition [F(1, 21) = 0.09, MSE = 0.007, p = .77, η2 = .004], AOI and Emotion [F(1, 21) = 0.004, MSE = 0.008, p = .95, η2 = .0002], or Emotion, Presentation Condition, and AOI [F(1, 21) = 1.76, MSE = 006, p = .20, η2 = .077].
+
+This also matches. 
+
+
+
+> 3.3. Results of correlation analysis
+
+> We did not observe a significant correlation between pupil diameter and fixation duration for the sum of both AOIs (p = .51, r = −.18), for the eye AOI (p = .31, r = −.27), or for the mouth AOI (p = .55, r = .16).
+
+This analysis was not present in the matlab script, and it isn't clear how many points were included in each correlation. To test, I wrote out CSVs of each final matrix with mean values by condition and CSVs of the participants included. 
+
+```{r}
+fixation <- read.csv(file="authorAssistance/matlab scripts/meanfixationbycondition.csv", header=FALSE)
+pupil <- read.csv(file="authorAssistance/matlab scripts/meanpupilsizebycondition.csv", header=FALSE)
+fixationpartic <- read.csv(file="authorAssistance/matlab scripts/fixationparticipants.csv", header=FALSE)
+pupilpartic <- as.data.frame(t(read.csv(file="authorAssistance/matlab scripts/pupilparticipants.csv", header=FALSE)))
+
+#add column with participant number
+fixation$ID <- fixationpartic$V1
+pupil$ID <- pupilpartic$V1
+
+```
+
+Based on the description of how these are set up, "first factor rotates slowest, last factor fastest" - will rename columns:
+```{r}
+#names for pupil are c("duration", "emotion"), so D1E1 D1E2 D2E1 D2E2, I believe D1 is supraliminal, 2= subliminal, 1= happy, 2=fear, but it doesn't matter for this. 
+names(pupil) <- c("D1E1", "D1E2", "D2E1", "D2E2", "ID")
+
+#for fixation, it is c("duration", "emotion", "ROI")
+names(fixation) <- c("D1E1R1", "D1E1R2", "D1E2R1", "D1E2R2", "D2E1R1", "D2E1R2", "D2E2R1", "D2E2R2", "ID")
+```
+
+In the methods, it says this correlation was done "irrespective of condition", so perhaps they took the averages across conditions?
+
+Melt pupil data:
+```{r}
+pupil.l <- melt(data=pupil, id = "ID", value.name = "pupil")
+pupil.sum <- pupil.l %>% 
+  group_by(ID) %>% 
+  summarize(pupil = mean(pupil))
+```
+
+Subset fixation by ROI, then melt:
+```{r}
+eye.l <- melt(data=select(fixation, ends_with("R1"), ID), id="ID", value.name = "eye")
+eye.sum <- eye.l %>% 
+  group_by(ID) %>% 
+  summarize(eye = mean(eye))
+
+mouth.l <- melt(data=select(fixation, ends_with("R2"), ID), id="ID", value.name="mouth")
+mouth.sum <- mouth.l %>% 
+  group_by(ID) %>% 
+  summarize(mouth = mean(mouth))
+```
+
+Merge all three by ID
+```{r}
+dataforcor <- merge(pupil.sum, eye.sum, by="ID")
+dataforcor <- merge(dataforcor, mouth.sum, by="ID")
+
+dataforcor$eyemouthsum <- rowSums(select(dataforcor, mouth, eye))
+```
+
+>  sum of both AOIs (p = .51, r = −.18),
+
+```{r}
+cor.test(dataforcor$pupil, dataforcor$eyemouthsum)
+```
+
+This does not match what was reported, but likely due to insufficient information about what points they used. 
+
+```{r}
+compareValues(reportedValue = .51, obtainedValue = .1357, isP=TRUE)
+compareValues(reportedValue = -.18, obtainedValue = .389)
+```
+
+
+> for the eye AOI (p = .31, r = −.27), 
+
+
+```{r}
+cor.test(dataforcor$pupil, dataforcor$eye)
+```
+
+
+This does not match what was reported, but likely due to insufficient information about what points they used. 
+
+```{r}
+compareValues(reportedValue = .31, obtainedValue = .62, isP=TRUE)
+compareValues(reportedValue = -.27, obtainedValue = .13)
+```
+
+> or for the mouth AOI (p = .55, r = .16).
+
+
+```{r}
+cor.test(dataforcor$pupil, dataforcor$mouth)
+```
+
+This does not match what was reported, but likely due to insufficient information about what points they used. 
+
+```{r}
+compareValues(reportedValue = .55, obtainedValue = .018, isP=TRUE)
+compareValues(reportedValue = .16, obtainedValue = .58)
+```
+
 
 ## Step 2: Load data
 
@@ -87,6 +304,30 @@ for (i in data2sheets){
 
 ## Step 3: Tidy data
 
+
+
+
+
+> A control analysis excluding items from one actress displaying no teeth in the fearful condition (see Methods) and three participants yielded a similar pattern of results, although the main effect of emotion is only marginally significant in this case [F(1, 16) = 3.845, p = 0.068, η2 = .19]. The marginal effect is likely explained by reduced power because we had to exclude three additional infants from this analysis (n = 17 instead of n = 20 in the main analysis) in order to adhere to our inclusion criterion.
+
+```{r}
+```
+
+## Step 5: Conclusion
+
+```{r}
+```
+
+[Please also include a brief text summary describing your findings. If this reproducibility check was a failure, you should note any suggestions as to what you think the likely cause(s) might be.]
+
+[This function will output information about the package versions used in this report:]
+
+```{r session_info, include=TRUE, echo=TRUE, results='markup'}
+devtools::session_info()
+```
+
+
+## Appendix: R preprocessing Attempts
 ### Pre-processing
 
 Because the raw data is given, all the preprocessing described in the article needs to be repeated. It said the analysis was done in MATLAB, but sadly no script was included with the data submission. 
@@ -98,19 +339,6 @@ I initially tried to replicate the preprocessing based on the description in the
 3. Each dataset does not contain the necessary variables for the analyses as described in the article. Condition, emotion, and trial had to be inserted based on the legend and by trying to interpret the numeric codes used in the media name (pupil data) and the tab/face codes in the fixation data. 
 4. Exclusion criteria were explained in the article, but it was unclear what variables in which dataset were used to make the decisions. The number of excluded participants (and remaining trials per participant) I got in my preprocessing steps did not match the numbers reported.
 5. Finally, because of the lack of information in the preprocessing and exclusion instructions, the degrees of freedom in the first analysis did not match the DoF reported in the results (F(1,19) reported versus F(1,21) found here). Instead of a numeric error, it's likely these errors all stem from a lack of information about the processing steps, given that only the raw data was provided. 
-
-
-I am putting the conclusions here, as the insufficient error prevents me from completing the replication. I will include the numeric errors that I found in the analyses I could complete, but I believe they may be a result of insufficient information. 
-
-```{r}
-codReport(Report_Type = 'pilot',
-          Article_ID = 'bPJii', 
-          Insufficient_Information_Errors = 1,
-          Decision_Errors = 0, 
-          Major_Numerical_Errors = 3, 
-          Minor_Numerical_Errors = 0)
-
-```
 
 
 ### Preprocessing and Steps that were complete
@@ -346,56 +574,3 @@ for (i in 1:nrow(pupildata)) {
 
 ```
 
-## Step 4: Run analysis
-
-
-### Descriptive statistics
-
-Average number of trials infants (n = `r length(levels(factor(numtrials$participant)))`) contributed to the pupil data
-
-> In the final sample, infants contributed on average 9.7 trials per condition (SD = 3.9).
-
-```{r}
-
-kable(summarytrials, digits = 1, caption = "Number of trials per infant")
-```
-
-The numbers here are quite different than what was reported. I'm guessing something went wrong in the preprocessing. The mean number of trials was slightly lower than reported in the paper, and the SD was also slightly lower. 
-
-```{r}
-compareValues(reportedValue = 9.7, obtainedValue = 7.32)
-compareValues(reportedValue = 3.9, obtainedValue = 3.39)
-```
-
-### Inferential statistics
-> 3.1. Pupil diameter
-
-> We observed a main effect of Emotion [F(1, 19) = 6.45, MSE = .0039, p = .02, η2 = .25], revealing a larger pupil diameter for happy compared to fearful facial expressions irrespective of presentation condition (Figs. 2A and 3). There was no main effect of Presentation Condition [F(1, 19) = 0.40, MSE = .0029, p = .53, η2 = .02] and no interaction between Presentation Condition and Emotion [F(1, 19) = 1.17, MSE = .0011, p = .29, η2 = .06].
-
-```{r}
-summary(aov(relPupilSize ~ condition*Emotion + Error(participant/(condition*Emotion)), data=pupildata))
-
-```
-
-The degrees of freedom are off in this analysis, suggesting that the number of participants I excluded did not match the number they excluded in their analysis. There was a trend of a main effect of emotion in this analysis. 
-However, given the number of data points in this analysis doesn't match what they are reporting, the most likely error here is insufficient information. 
-
-At this point, we need more information from the authors to continue this replication analysis. 
-
-> A control analysis excluding items from one actress displaying no teeth in the fearful condition (see Methods) and three participants yielded a similar pattern of results, although the main effect of emotion is only marginally significant in this case [F(1, 16) = 3.845, p = 0.068, η2 = .19]. The marginal effect is likely explained by reduced power because we had to exclude three additional infants from this analysis (n = 17 instead of n = 20 in the main analysis) in order to adhere to our inclusion criterion.
-
-```{r}
-```
-
-## Step 5: Conclusion
-
-```{r}
-```
-
-[Please also include a brief text summary describing your findings. If this reproducibility check was a failure, you should note any suggestions as to what you think the likely cause(s) might be.]
-
-[This function will output information about the package versions used in this report:]
-
-```{r session_info, include=TRUE, echo=TRUE, results='markup'}
-devtools::session_info()
-```
