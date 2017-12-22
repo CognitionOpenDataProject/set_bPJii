@@ -21,6 +21,25 @@ Infants were presented with pictures of fearful and happy faces that were displa
 ------
 
 #### Target outcomes: 
+> 3.1. Pupil diameter
+
+> We observed a main effect of Emotion [F(1, 19) = 6.45, MSE = .0039, p = .02, η2 = .25], revealing a larger pupil diameter for happy compared to fearful facial expressions irrespective of presentation condition (Figs. 2A and 3). There was no main effect of Presentation Condition [F(1, 19) = 0.40, MSE = .0029, p = .53, η2 = .02] and no interaction between Presentation Condition and Emotion [F(1, 19) = 1.17, MSE = .0011, p = .29, η2 = .06].
+
+> A control analysis excluding items from one actress displaying no teeth in the fearful condition (see Methods) and three participants yielded a similar pattern of results, although the main effect of emotion is only marginally significant in this case [F(1, 16) = 3.845, p = 0.068, η2 = .19]. The marginal effect is likely explained by reduced power because we had to exclude three additional infants from this analysis (n = 17 instead of n = 20 in the main analysis) in order to adhere to our inclusion criterion.
+
+> 3.2. Fixation duration
+
+> While the main focus of the study was clearly on the analysis of pupil size, we also compared differences in fixation duration to complement this analysis.
+
+> As for pupil size, we observed a main effect of Emotion; infants showed a significantly longer fixation duration for happy compared to fearful facial expressions [F(1, 21) = 4.57, MSE = 0.015, p = .044, η2 = .19]. Furthermore, we found a main effect of Presentation Condition, showing that infants looked longer in the subliminal compared to the supraliminal condition [F(1, 21) = 8.57, MSE = 0.020, p = .008, η2 = .29] (see Fig. 2B). Note that in the subliminal conditions, a neutral face was presented during the time used for analyzing the fixation duration; hence, this effect can also be framed as a longer looking duration to neutral faces (as compared to emotional faces) preceded by subliminal emotional ones. An interaction between Presentation Condition and AOI [F(1, 21) = 20.42, MSE = 0.010, p < .001, η2 = .49] revealed that this was the case in particular for the eye region [t(21) = −4.06, p < .001, r = .66].
+
+> Furthermore, we observed a main effect of AOI [F(1, 21) = 59.05, MSE = 0.073, p < .001, η2 = .74], showing that infants fixated longer on the eye than on the mouth AOI.
+
+> There was no significant interaction between Emotion and Presentation Condition [F(1, 21) = 0.09, MSE = 0.007, p = .77, η2 = .004], AOI and Emotion [F(1, 21) = 0.004, MSE = 0.008, p = .95, η2 = .0002], or Emotion, Presentation Condition, and AOI [F(1, 21) = 1.76, MSE = 006, p = .20, η2 = .077].
+
+> 3.3. Results of correlation analysis
+
+> We did not observe a significant correlation between pupil diameter and fixation duration for the sum of both AOIs (p = .51, r = −.18), for the eye AOI (p = .31, r = −.27), or for the mouth AOI (p = .55, r = .16).
 
 
 
@@ -44,7 +63,7 @@ library(CODreports) # custom report functions
 library(reshape2)
 ```
 
-## Step 1.5. Replicating with sent Matlab codes 
+## Step 2. Replicating with sent Matlab codes 
 
 The authors provided the matlab scripts for this study along with the raw data. Using Matlab (R2017a), I followed instructions to replicate their analyses. 
 
@@ -91,7 +110,6 @@ To determine whether this was the case, I summed the supraliminal and subliminal
 ![Descriptive Stats - 2 conditions](images/descriptivestats_2condition.png)
 
 ```{r}
-compareValues(reportedValue = 9.7, obtainedValue = 9.7)
 compareValues(reportedValue = 3.9, obtainedValue = 1.9)
 ```
 
@@ -118,15 +136,22 @@ compareValues(reportedValue = 1.17, obtainedValue = 1.239)
 compareValues(reportedValue = 0.28, obtainedValue = 0.29, isP=TRUE)
 ```
 
+
+> A control analysis excluding items from one actress displaying no teeth in the fearful condition (see Methods) and three participants yielded a similar pattern of results, although the main effect of emotion is only marginally significant in this case [F(1, 16) = 3.845, p = 0.068, η2 = .19]. The marginal effect is likely explained by reduced power because we had to exclude three additional infants from this analysis (n = 17 instead of n = 20 in the main analysis) in order to adhere to our inclusion criterion.
+
+There's no mention in the script, readme file, or article which face was removed from analysis, so there is insufficient information to replicate this portion. 
+
+
 > 3.2. Fixation duration
 
 > While the main focus of the study was clearly on the analysis of pupil size, we also compared differences in fixation duration to complement this analysis.
 
 For this analysis, ran the pupil_fixation_analysis.m and the did_baby_look_during_subliminal.m. I saved my changes as " pupil_fixation_analysis_AHMedits.m".
 
-The script was organized such that several lines of code had to be re-run with different conditions specified (described in comments). I added a few sections to the code to be sure I ran it in the correct order, as objects were named the same and could easily be erroneously assigned to the wrong condition if run out of order. 
+The script was organized such that several lines of code had to be re-run with different conditions specified (described in comments). I added a few sections to the code to be sure I ran it in the correct order, as objects were named the same and could easily be assigned to the wrong condition if the code was run out of order. 
 
 I ran the script as follows:  
+
 * Ran first two sections (lines 1-87) as is, changing directory information
 * Ran supraliminal section with condition = 1 in line 93
 * Copied and pasted the STORE values section for Happy into the command window (so the whole section would not run)
@@ -198,7 +223,7 @@ names(fixation) <- c("D1E1R1", "D1E1R2", "D1E2R1", "D1E2R2", "D2E1R1", "D2E1R2",
 
 In the methods, it says this correlation was done "irrespective of condition", so perhaps they took the averages across conditions?
 
-Melt pupil data:
+Melt then aggregate pupil data:
 ```{r}
 pupil.l <- melt(data=pupil, id = "ID", value.name = "pupil")
 pupil.sum <- pupil.l %>% 
@@ -206,7 +231,7 @@ pupil.sum <- pupil.l %>%
   summarize(pupil = mean(pupil))
 ```
 
-Subset fixation by ROI, then melt:
+Subset fixation by ROI, then melt and aggregate:
 ```{r}
 eye.l <- melt(data=select(fixation, ends_with("R1"), ID), id="ID", value.name = "eye")
 eye.sum <- eye.l %>% 
@@ -233,11 +258,11 @@ dataforcor$eyemouthsum <- rowSums(select(dataforcor, mouth, eye))
 cor.test(dataforcor$pupil, dataforcor$eyemouthsum)
 ```
 
-This does not match what was reported, but likely due to insufficient information about what points they used. 
+This does not match what was reported, but likely due to insufficient information about what points they used. I am commenting out these functions, as insufficient information errors seem to be more fitting. 
 
 ```{r}
-compareValues(reportedValue = .51, obtainedValue = .1357, isP=TRUE)
-compareValues(reportedValue = -.18, obtainedValue = .389)
+#compareValues(reportedValue = .51, obtainedValue = .1357, isP=TRUE)
+#compareValues(reportedValue = -.18, obtainedValue = .389)
 ```
 
 
@@ -249,11 +274,11 @@ cor.test(dataforcor$pupil, dataforcor$eye)
 ```
 
 
-This does not match what was reported, but likely due to insufficient information about what points they used. 
+This does not match what was reported, and I'm taking the same tactic as above. 
 
 ```{r}
-compareValues(reportedValue = .31, obtainedValue = .62, isP=TRUE)
-compareValues(reportedValue = -.27, obtainedValue = .13)
+#compareValues(reportedValue = .31, obtainedValue = .62, isP=TRUE)
+#compareValues(reportedValue = -.27, obtainedValue = .13)
 ```
 
 > or for the mouth AOI (p = .55, r = .16).
@@ -263,15 +288,39 @@ compareValues(reportedValue = -.27, obtainedValue = .13)
 cor.test(dataforcor$pupil, dataforcor$mouth)
 ```
 
-This does not match what was reported, but likely due to insufficient information about what points they used. 
+Same as above.  
 
 ```{r}
-compareValues(reportedValue = .55, obtainedValue = .018, isP=TRUE)
-compareValues(reportedValue = .16, obtainedValue = .58)
+#compareValues(reportedValue = .55, obtainedValue = .018, isP=TRUE)
+#compareValues(reportedValue = .16, obtainedValue = .58)
 ```
 
 
-## Step 2: Load data
+## Step 3: Conclusion: 
+
+Overall, the matlab codes and additional data helped immensely with my ability to replicate the author's findings. Everything that was specified within the matlab codes replicated with only very minor descrepencies (except for the descriptive statistics, which were not in the original code). 
+
+However, I found insufficient information to replicate analyses that were not present in the code, such as the removal of one fearful actor and the correlations between pupil and fixation (what I tried based on what was there was way off). I found the matlab code and data as they shared with us immensely more helpful than the two excel sheets, and it would have been nice if that was what they had shared with the paper. 
+
+I am counting each of the correlations separately as insufficient information errors, but because they depend on the same information, it may make sense to count as a single error, in which case there would be two instead of four. 
+
+```{r}
+codReport(Report_Type = 'pilot',
+          Article_ID = 'bPJii', 
+          Insufficient_Information_Errors = 4,
+          Decision_Errors = 0, 
+          Major_Numerical_Errors = 1, 
+          Minor_Numerical_Errors = 4)
+```
+
+
+
+```{r session_info, include=TRUE, echo=TRUE, results='markup'}
+devtools::session_info()
+```
+
+
+## Appendix: Initial piloting attempt
 
 Data are in two files. data1.xlsx appears to be the fixation data for each participant by condition and area of interest (AOI), while data2.xlsx appears to be the raw pupil size data for each participant and by trial timestamp. Many sheets per file, with variable names across multiple rows. 
 
@@ -302,32 +351,7 @@ for (i in data2sheets){
 
 ```
 
-## Step 3: Tidy data
 
-
-
-
-
-> A control analysis excluding items from one actress displaying no teeth in the fearful condition (see Methods) and three participants yielded a similar pattern of results, although the main effect of emotion is only marginally significant in this case [F(1, 16) = 3.845, p = 0.068, η2 = .19]. The marginal effect is likely explained by reduced power because we had to exclude three additional infants from this analysis (n = 17 instead of n = 20 in the main analysis) in order to adhere to our inclusion criterion.
-
-```{r}
-```
-
-## Step 5: Conclusion
-
-```{r}
-```
-
-[Please also include a brief text summary describing your findings. If this reproducibility check was a failure, you should note any suggestions as to what you think the likely cause(s) might be.]
-
-[This function will output information about the package versions used in this report:]
-
-```{r session_info, include=TRUE, echo=TRUE, results='markup'}
-devtools::session_info()
-```
-
-
-## Appendix: R preprocessing Attempts
 ### Pre-processing
 
 Because the raw data is given, all the preprocessing described in the article needs to be repeated. It said the analysis was done in MATLAB, but sadly no script was included with the data submission. 
