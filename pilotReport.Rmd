@@ -96,21 +96,17 @@ But it looks like we can start at the next section in that script using the proc
 
 > In the final sample, infants contributed on average 9.7 trials per condition (SD = 3.9).
 
-I did not see this statistic anywhere in the script, but did see that in the analysis loop, trial was used for each participant. I added code to capture the number of trials for each participant and compiled them into a single array. 
+I updated the "pupil_pupilsize_analysis_AHM.m" script with the additional lines of code the author provided to capture and aggregate the trial numbers information. 
 
-I then took the mean and standard deviation of that array. The picture of the output from running the commands in the console is included below:
+I had to add additional code to remove the neutral trials from resulting matrix in order to get the correct values. Overall, I found only slight rounding errors. 
 
 ![Descriptive Stats - 4 conditions](images/descriptivestats_4condition.png)
 
-The numbers here are still different than what was reported. Both the mean number of trials and the SD were lower than reported. However, it was unclear from the paper whether condition meant condition as described in the code, or just supraliminal/subliminal (without emotion). 
-
-To determine whether this was the case, I summed the supraliminal and subliminal and then took the mean and standard deviations. This resulted in the same mean as reported, but a lower standard deviation.  
-
-
-![Descriptive Stats - 2 conditions](images/descriptivestats_2condition.png)
+Although the author said in their responses they used the first calcualtion of std, based on my numbers, it looks like it actually was the second. 
 
 ```{r}
-compareValues(reportedValue = 3.9, obtainedValue = 1.9)
+compareValues(reportedValue = 3.9, obtainedValue = 3.97)
+compareValues(reportedValue = 9.7, obtainedValue = 9.75)
 ```
 
 ### Inferential statistics
@@ -140,6 +136,8 @@ compareValues(reportedValue = 0.28, obtainedValue = 0.29, isP=TRUE)
 > A control analysis excluding items from one actress displaying no teeth in the fearful condition (see Methods) and three participants yielded a similar pattern of results, although the main effect of emotion is only marginally significant in this case [F(1, 16) = 3.845, p = 0.068, η2 = .19]. The marginal effect is likely explained by reduced power because we had to exclude three additional infants from this analysis (n = 17 instead of n = 20 in the main analysis) in order to adhere to our inclusion criterion.
 
 There's no mention in the script, readme file, or article which face was removed from analysis, so there is insufficient information to replicate this portion. 
+
+Update Jan 2018 email: The authors responded about the infants who were removed (which was in the paper), but it is not clear which stimuli were removed (which corresponded to the actress who displayed no teeth in the fearful condition). If the logic for infant remove is built into the script (which it appeared to be for the initial analysis), we would just need the code to remove the relevant actress to reproduce this analysis. 
 
 
 > 3.2. Fixation duration
@@ -200,11 +198,13 @@ This also matches.
 
 This analysis was not present in the matlab script, and it isn't clear how many points were included in each correlation. To test, I wrote out CSVs of each final matrix with mean values by condition and CSVs of the participants included. 
 
+I initially used the "staty2" matrix from the pupil analysis, as that is what was used in their analysis in the matlab code. However, after trying the "staty" matrix instead (differs from staty2 in that staty2 is "divided by the mean to reduce within-subject variance"), it seems to produce more similar results. 
+
 ```{r}
-fixation <- read.csv(file="authorAssistance/matlab scripts/meanfixationbycondition.csv", header=FALSE)
-pupil <- read.csv(file="authorAssistance/matlab scripts/meanpupilsizebycondition.csv", header=FALSE)
-fixationpartic <- read.csv(file="authorAssistance/matlab scripts/fixationparticipants.csv", header=FALSE)
-pupilpartic <- as.data.frame(t(read.csv(file="authorAssistance/matlab scripts/pupilparticipants.csv", header=FALSE)))
+fixation <- read.csv(file="authorAssistance/matlab scripts/meanfixationbycondition.csv", header=FALSE) #cond1245 in matlab code
+pupil <- read.csv(file="authorAssistance/matlab scripts/meanpupilsizebycondition.csv", header=FALSE) #staty in matlab code 
+fixationpartic <- read.csv(file="authorAssistance/matlab scripts/fixationparticipants.csv", header=FALSE) #participants in matlab code
+pupilpartic <- as.data.frame(t(read.csv(file="authorAssistance/matlab scripts/pupilparticipants.csv", header=FALSE))) #participants in matlab code
 
 #add column with participant number
 fixation$ID <- fixationpartic$V1
@@ -212,16 +212,31 @@ pupil$ID <- pupilpartic$V1
 
 ```
 
+Jan 2018 email: "To be included in this analysis, an infant had to meet the inclusion criteria for both, the analysis of pupil size and the analysis of fixation duration. This was the case for 16 infants (participant numbers 3,6,10,11,12,13,16,17,18,19,20,21,22,23,24,29)."
+
+The authors additionally said they used the "corrcoef" function in matlab, which can return the correlation coefficients and p values. Because they did not provide code to combine and average the values they described in Matlab, I will do so in R. The corr.test() function should be equivalent to the corcoef matlab function. 
+
+First need to remove ids of infants who did not fit the criteria. 
+```{r}
+partstoinc <- c(3,6,10,11,12,13,16,17,18,19,20,21,22,23,24,29)
+fixation <- filter(fixation, ID %in% partstoinc)
+pupil <- filter(pupil, ID %in% partstoinc)
+
+```
+
 Based on the description of how these are set up, "first factor rotates slowest, last factor fastest" - will rename columns:
 ```{r}
-#names for pupil are c("duration", "emotion"), so D1E1 D1E2 D2E1 D2E2, I believe D1 is supraliminal, 2= subliminal, 1= happy, 2=fear, but it doesn't matter for this. 
+#names for pupil are c("duration", "emotion"), so D1E1 D1E2 D2E1 D2E2, I believe D1 is supraliminal, 2= subliminal, 1= happy, 2=fear, but it doesn't matter for this, as all values within participant will be averaged across. 
 names(pupil) <- c("D1E1", "D1E2", "D2E1", "D2E2", "ID")
 
 #for fixation, it is c("duration", "emotion", "ROI")
 names(fixation) <- c("D1E1R1", "D1E1R2", "D1E2R1", "D1E2R2", "D2E1R1", "D2E1R2", "D2E2R1", "D2E2R2", "ID")
 ```
 
-In the methods, it says this correlation was done "irrespective of condition", so perhaps they took the averages across conditions?
+In the methods, it says this correlation was done "irrespective of condition". 
+Updated email: "We then computed the average pupil size/ fixation duration across all 4 conditions (fear and happy, sub- und supraliminal) for these participants and computed a correlation between the pupil size and the summed fixation to both AOIs, the fixation to the eye AOI, and the fixation to the mouth AOI using the Matlab function corrcoef()."
+
+From their description, it sounds like they created a single average score for each participant for the correlations, but it would be nice if the corrcoef function in Matlab also returned the number of points included in each correlation to be sure. 
 
 Melt then aggregate pupil data:
 ```{r}
@@ -258,11 +273,11 @@ dataforcor$eyemouthsum <- rowSums(select(dataforcor, mouth, eye))
 cor.test(dataforcor$pupil, dataforcor$eyemouthsum)
 ```
 
-This does not match what was reported, but likely due to insufficient information about what points they used. I am commenting out these functions, as insufficient information errors seem to be more fitting. 
+This is much closer to what was reported in Matlab than my previous attempts.
 
 ```{r}
-#compareValues(reportedValue = .51, obtainedValue = .1357, isP=TRUE)
-#compareValues(reportedValue = -.18, obtainedValue = .389)
+compareValues(reportedValue = .51, obtainedValue = .58, isP=TRUE)
+compareValues(reportedValue = -.18, obtainedValue = -.15)
 ```
 
 
@@ -274,11 +289,11 @@ cor.test(dataforcor$pupil, dataforcor$eye)
 ```
 
 
-This does not match what was reported, and I'm taking the same tactic as above. 
+Again, not quite a match, but much closer than what I had previously.  
 
 ```{r}
-#compareValues(reportedValue = .31, obtainedValue = .62, isP=TRUE)
-#compareValues(reportedValue = -.27, obtainedValue = .13)
+compareValues(reportedValue = .31, obtainedValue = .38, isP=TRUE)
+compareValues(reportedValue = -.27, obtainedValue = -.23)
 ```
 
 > or for the mouth AOI (p = .55, r = .16).
@@ -288,29 +303,28 @@ This does not match what was reported, and I'm taking the same tactic as above.
 cor.test(dataforcor$pupil, dataforcor$mouth)
 ```
 
-Same as above.  
+Same as above. P value is consistent as reported.  
 
 ```{r}
-#compareValues(reportedValue = .55, obtainedValue = .018, isP=TRUE)
-#compareValues(reportedValue = .16, obtainedValue = .58)
+compareValues(reportedValue = .55, obtainedValue = .54, isP=TRUE)
+compareValues(reportedValue = .16, obtainedValue = .16)
 ```
 
 
 ## Step 3: Conclusion: 
 
-Overall, the matlab codes and additional data helped immensely with my ability to replicate the author's findings. Everything that was specified within the matlab codes replicated with only very minor descrepencies (except for the descriptive statistics, which were not in the original code). 
+Overall, the matlab codes and additional data helped immensely with my ability to replicate the author's findings. The author's additional code and description helped to get much closer to replicating the values. 
 
-However, I found insufficient information to replicate analyses that were not present in the code, such as the removal of one fearful actor and the correlations between pupil and fixation (what I tried based on what was there was way off). I found the matlab code and data as they shared with us immensely more helpful than the two excel sheets, and it would have been nice if that was what they had shared with the paper. 
+However, even with description, I found it difficult to replicate analyses that were not present in the code, such as the removal of one fearful actor and the correlations between pupil and fixation (what I tried based on what was there was way off). Other details (such as which matrix was used in which analysis, or how many points were included in the correlation analyses) were also missing from the descriptions. I found the matlab code and data as they shared with us immensely more helpful than the two excel sheets, and it would have been nice if that was what they had shared with the paper. 
 
-I am counting each of the correlations separately as insufficient information errors, but because they depend on the same information, it may make sense to count as a single error, in which case there would be two instead of four. 
 
 ```{r}
 codReport(Report_Type = 'pilot',
           Article_ID = 'bPJii', 
-          Insufficient_Information_Errors = 4,
+          Insufficient_Information_Errors = 1,
           Decision_Errors = 0, 
-          Major_Numerical_Errors = 1, 
-          Minor_Numerical_Errors = 4)
+          Major_Numerical_Errors = 5, 
+          Minor_Numerical_Errors = 7)
 ```
 
 

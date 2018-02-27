@@ -439,6 +439,8 @@ for p = 1:length(participants)
    
       % compute mean over remaining data
       [t nu] = size(condy);
+       trialnum(c,p)=sum(isfinite(condy)); 
+     
       if t>1
           condmean(c,p,:) = nanmean(condy);
         
@@ -488,6 +490,7 @@ for p = 1:length(participants)
 
    
       [t nu] = size(condy);
+      trialnum(c,p)=sum(isfinite(condy));
       if t>1
           condmean(c,p,:) = nanmean(condy);
         
@@ -522,6 +525,7 @@ for p = 1:length(participants)
 
    
       [t nu] = size(condy);
+      trialnum(c,p)=sum(isfinite(condy));
       if t>1
           condmean(c,p,:) = nanmean(condy);
         
@@ -543,10 +547,20 @@ staty = [staty(:,1:2) staty(:,4:5)]
 % divide by mean to reduce within-subject variance
 staty2 = staty./[mean(staty,2) mean(staty,2) mean(staty,2) mean(staty,2)];
 
+%AHM write out as csv
+csvwrite("meanpupilsizebycondition.csv", staty)
+
 %AHM: Using numtrials, take the mean & standard deviation
 size(numtrials)
 mean(numtrials)
-std(numtrials)duration
+std(numtrials)
+
+%From author Jan 2018 email:
+%First, need to get rid of condition 3
+trialnum(3,:) = []
+mean(mean(trialnum))
+std(mean(trialnum,2))
+std(mean(trialnum))
 
 %However, it's unclear whether condition referred to only supra/subliminal 
 %In this case, need to sum number of trials for c1 and c2, and then for c4
